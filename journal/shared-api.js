@@ -3,20 +3,24 @@ export const REPOSITORY = 'shoot5313/little-days-vault';
 export const DATA_PATH = 'journal/space-v1.json';
 export const validToken = token => typeof token === 'string' && /^github_pat_[A-Za-z0-9_]{20,255}$/.test(token);
 export class ApiError extends Error {
-  constructor(message,status=0,retryAt=0) {super(message);this.status=status;this.retryAt=retryAt;}
+  constructor(message,status=0,retryAt=0,code='') {super(message);this.status=status;this.retryAt=retryAt;this.code=code;}
 }
 export class VaultApi {
   constructor(token,{fetchFn=globalThis.fetch,timeout=15000}={}) {
     if(!validToken(token)) throw new Error('请输入以 github_pat_ 开头、只授权私有仓库的访问令牌。');
-    this.token=token;this.fetchFn=fetchFn;this.timeout=timeout;
+    // Native browser fetch requires a Window/Worker receiver, not a VaultApi instance.
+    this.token=token;this.fetchFn=fetchFn.bind(globalThis);this.timeout=timeout;
   }
   async request(method,path,body,{missing=false,raw=false}={}) {
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),this.timeout);
+    const step=method==='PUT'?{name:'保存记录',code:'C3'}:path.startsWith('/contents/') || path.startsWith('/git/blobs/')?{name:'读取空间',code:'C2'}:{name:'确认访问权限',code:'C1'};
+    let received=false;
     try {
       const response=await this.fetchFn(`https://api.github.com/repos/${REPOSITORY}${path}`,{
         method,headers:{Authorization:`Bearer ${this.token}`,Accept:raw?'application/vnd.github.raw+json':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(body?{'Content-Type':'application/json'}:{})},
         body:body?JSON.stringify(body):undefined,signal:controller.signal,credentials:'omit',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer'
       });
+      received=true;
       if(missing && response.status===404) return null;
       if(!response.ok) {
         if(response.status===429 || response.status===403) {
@@ -31,11 +35,15 @@ export class VaultApi {
         throw new ApiError(`连接暂时失败（${response.status}），本机记录仍然保留。`,response.status);
       }
       const text=await response.text();
-      if(text.length > MAX_BYTES*2+200000) throw new Error('文件超出容量。');
-      return raw?text:JSON.parse(text);
+      if(text.length > MAX_BYTES*2+200000) throw new ApiError(`${step.name}返回的文件超过容量限制。（${step.code}-SIZE）`,response.status,0,`${step.code}-SIZE`);
+      if(raw)return text;
+      try {return JSON.parse(text);}
+      catch {throw new ApiError(`${step.name}时收到的内容格式异常，请稍后重试。（${step.code}-FORMAT）`,response.status,0,`${step.code}-FORMAT`);}
     } catch(error) {
       if(error instanceof ApiError) throw error;
-      throw new ApiError(controller.signal.aborted?'连接超时，本机记录仍然保留。':'网络或数据响应异常，本机记录仍然保留。');
+      const kind=controller.signal.aborted?'TIMEOUT':received?'BODY':'NET';
+      const reason=controller.signal.aborted?'连接超时':received?'响应读取中断':'未能连接到 GitHub';
+      throw new ApiError(`${step.name}时${reason}，请稍后重试。已保存的本机记录仍保留。（${step.code}-${kind}）`,0,0,`${step.code}-${kind}`);
     } finally {clearTimeout(timer);}
   }
   async verifyPrivate() {
@@ -50,7 +58,8 @@ export class VaultApi {
     if(file.encoding==='base64') text=new TextDecoder('utf-8',{fatal:true}).decode(unbase64(file.content));
     else if(file.encoding==='none') text=await this.request('GET',`/git/blobs/${file.sha}`,undefined,{raw:true});
     else throw new Error('云端文件编码不正确。');
-    return {sha:file.sha,envelope:JSON.parse(text)};
+    try {return {sha:file.sha,envelope:JSON.parse(text)};}
+    catch {throw new ApiError('空间文件格式异常，未修改现有记录。（C2-FORMAT）',200,0,'C2-FORMAT');}
   }
   async write(envelope,sha) {
     const content=base64(new TextEncoder().encode(JSON.stringify(envelope)));
