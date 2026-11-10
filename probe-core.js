@@ -21,7 +21,11 @@ export async function check(probe,{fetchFn=globalThis.fetch,timeoutMs=10000,now=
   try {
     const response = await fetchFn(probe.url,{method:'GET',cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:controller.signal,headers:probe.headers || {}});
     if(!response.ok) {
-      if(response.status === 429 || (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0')) return {ok:false,reason:'limited',detail:'接口有响应，但触发访问频率限制'};
+      if(response.status === 429 || (response.status === 403 && (response.headers.get('x-ratelimit-remaining') === '0' || response.headers.get('retry-after')))) {
+        const reset=Number(response.headers.get('x-ratelimit-reset'));
+        const suffix=reset>0 && Number.isFinite(reset)?`，额度预计在 ${new Date(reset*1000).toLocaleTimeString()} 恢复`:'';
+        return {ok:false,reason:'limited',detail:`接口已连接，匿名请求触发限流${suffix}`};
+      }
       return {ok:false,reason:'http',detail:`服务返回 HTTP ${response.status}`};
     }
     const value = await response.json();
@@ -42,6 +46,7 @@ export async function check(probe,{fetchFn=globalThis.fetch,timeoutMs=10000,now=
 
 export function conclusion(results) {
   if(results.length === 3 && results.every(result=>result.ok)) return '三项通过：当前网络可以加载网页并读取公开测试数据。还没有验证登录、私有数据写入或双人同步。';
+  if(results[0]?.ok && results.slice(1).length===2 && results.slice(1).every(result=>result.ok || result.reason==='limited')) return '网页和 GitHub 接口均已建立连接，但匿名额度不足，公开读取没有全部完成。这不等于被 GFW 拦截；下一步可进行受限权限的私有读写检查。';
   if(results[0]?.ok && results.slice(1).some(result=>!result.ok)) return '网页可以加载，但数据读取未全部通过。当前还不能用作日记同步方案。';
   return '检查未全部通过。请保留结果，切换另一种网络后再测试一次。';
 }

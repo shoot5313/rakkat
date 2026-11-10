@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f1f7f6"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>小日子 · 私有读写检查</title><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./private.css"><script type="module" src="./private-probe.js"></script>
+</head>
+<body><main>
+  <div class="brand"><span class="mark" aria-hidden="true">♡</span><span>小日子<small>OUR LITTLE DAYS</small></span></div>
+  <p class="eyebrow">再确认，记录能被好好保存。</p>
+  <h1>检查私有空间的<br>保存与读取。</h1>
+  <p class="intro">公开接口限流不等于网络不通。这一步用受限权限，验证一条虚构加密记录的上传、读回和清理。</p>
+  <section>
+    <h2>先准备一个短期访问令牌</h2>
+    <p>在 GitHub 官方页面创建 Fine-grained token，只选择 <strong>little-days-vault</strong>，Contents 设为 <strong>Read and write</strong>。有效期先用 7 天，其他权限保持默认。</p>
+    <p><a href="https://github.com/settings/personal-access-tokens/new?name=LittleDays-connect-check&amp;description=Private%20encrypted%20connection%20test%20only&amp;target_name=shoot5313&amp;expires_in=7&amp;contents=write" target="_blank" rel="noopener noreferrer">打开 GitHub 官方创建页面 ↗</a></p>
+    <p class="summary">在 Repository access 中选 Only select repositories，再选 little-days-vault。不要选择 All repositories，也不要授权存放本测试网页的 little-days-connect。</p>
+  </section>
+  <section aria-labelledby="private-title">
+    <h2 id="private-title">关闭代理 / VPN 后检查</h2>
+    <label for="network">当前使用的网络</label><select id="network"><option>Wi-Fi</option><option>蜂窝网络</option></select>
+    <label for="token">GitHub Fine-grained token</label><input class="token-field" type="password" id="token" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="github_pat_…">
+    <p class="small">令牌只在本次测试中直接发送给 api.github.com，不写入浏览器存储、仓库文件或测试报告。不要把令牌发到聊天中。</p>
+    <label class="check"><input id="vpn-off" type="checkbox">代理 / VPN 已关闭，令牌只授权了 little-days-vault</label>
+    <button id="run" type="button">检查私有读写</button>
+    <p id="hint" role="status">将向私有仓库写入并清理一条虚构测试密文，不使用真实日记。</p>
+    <ol aria-label="检查项目">
+      <li><span>私有权限</span><strong id="privacy-result">未检查</strong></li>
+      <li><span>加密写入</span><strong id="write-result">未检查</strong></li>
+      <li><span>读取解密</span><strong id="read-result">未检查</strong></li>
+      <li><span>清理测试文件</span><strong id="cleanup-result">未检查</strong></li>
+    </ol>
+    <p id="summary" class="summary" aria-live="polite">尚未验证。本页是连接测试，不是正式日记应用。</p>
+    <button id="copy" type="button" class="secondary" hidden>复制测试结果</button><textarea id="report" readonly hidden aria-label="测试结果，可长按复制"></textarea>
+  </section>
+  <footer>测试密钥只在本次页面内临时生成，不上传。Git 历史中可能保留测试密文，但其中没有真实记录；清理不会改写仓库历史。完成测试后可在 GitHub 撤销此短期令牌。<br><a href="./">返回普通连接检查</a></footer>
+</main></body></html>
