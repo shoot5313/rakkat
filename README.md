@@ -1,2 +1,13 @@
-# little-days-connect
-Public connectivity probe for a two-person journal prototype; contains no personal records.
+# 小日子 · GitHub 连接检查
+
+这是公开的网络测试站，不是正式日记应用。
+
+- 只检查 GitHub Pages 文件、GitHub API 和本仓库虚构测试数据的读取。
+- 不含真实日记、照片、留言、经期记录、账号密码、访问令牌或解密密钥。
+- 不要求访客登录，不写入 GitHub，不读取浏览器中的日记存储。
+- 测试结果只显示在当前页面，由使用者自行复制分享；平台可能按其政策记录访问。
+- 三项通过不代表私有仓库认证、写入、加密恢复或双人同步已完成验证。
+
+使用 iPhone Safari 关闭代理 / VPN，分别用常用 Wi-Fi 和蜂窝网络测试。
+
+只有这里明确列出的测试文件会发布，不发布原型项目的配置或私有文件。

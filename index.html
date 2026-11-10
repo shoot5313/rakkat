@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f1f7f6">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>小日子 · 连接检查</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./probe.js"></script>
+</head>
+<body>
+  <main>
+    <div class="brand"><span class="mark" aria-hidden="true">♡</span><span>小日子<small>OUR LITTLE DAYS</small></span></div>
+    <p class="eyebrow">先确认，彼此能连上。</p>
+    <h1>给我们的小空间<br>找一个能用的入口。</h1>
+    <p class="intro">这次检查 GitHub 网页和数据读取接口。请关闭代理 / VPN，再分别用 Wi-Fi 和蜂窝网络测试。</p>
+    <section aria-labelledby="test-title">
+      <h2 id="test-title">连接检查</h2>
+      <label for="network">当前使用的网络</label>
+      <select id="network"><option value="Wi-Fi">Wi-Fi</option><option value="蜂窝网络">蜂窝网络</option></select>
+      <label class="check"><input id="vpn-off" type="checkbox">我已关闭代理 / VPN</label>
+      <button id="run" type="button">开始检查</button>
+      <p id="hint" role="status">测试结果仅显示在这台设备上。</p>
+      <ol aria-label="检查项目">
+        <li><span>网页文件<small>重新从 GitHub Pages 获取测试文件</small></span><strong id="static-result">未检查</strong></li>
+        <li><span>数据接口<small>连接 GitHub API</small></span><strong id="api-result">未检查</strong></li>
+        <li><span>读取测试数据<small>通过接口读取一条公开的虚构数据</small></span><strong id="contents-result">未检查</strong></li>
+      </ol>
+      <p id="summary" class="summary" aria-live="polite">通过这三项，只能说明页面和公开读取可用；登录、私有数据写入及双人同步还需要后续验证。</p>
+      <button id="copy" type="button" class="secondary" hidden>复制测试结果</button>
+      <textarea id="report" readonly hidden aria-label="测试结果，可长按复制"></textarea>
+    </section>
+    <footer>本页没有日记输入框，不要求登录，也不读取或上传你手机里的记录。它不是正式日记应用。GitHub 可能按其服务政策记录网站与接口访问。</footer>
+    <noscript>需要在 Safari 中启用 JavaScript 才能运行连接检查。</noscript>
+  </main>
+</body>
+</html>
