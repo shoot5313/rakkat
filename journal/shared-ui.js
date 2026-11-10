@@ -2,7 +2,7 @@ import {DeviceStore,SharedJournal} from './shared-store.js';
 import {newRecovery} from './shared-crypto.js';
 import {canonical} from './shared-model.js';
 
-const tokenLink='https://github.com/settings/personal-access-tokens/new?name=LittleDays-phone&target_name=shoot5313&expires_in=90&contents=write';
+const tokenLink='https://github.com/settings/personal-access-tokens/new?name=LittleDays-phone&target_name=shoot5313&expires_in=365&contents=write';
 const $=selector=>document.querySelector(selector);
 function download(value,name) {
   const url=URL.createObjectURL(new Blob([typeof value==='string'?value:JSON.stringify(value)],{type:'application/json'}));
@@ -20,12 +20,12 @@ export async function initializeShared(onUpdate) {
   const welcome=document.createElement('section');welcome.className='welcome settings-card';
   welcome.innerHTML=`<p class="eyebrow">A PLACE FOR TWO</p><h1>从今天起，<br>把小事写给彼此。</h1><p>第一次在这台手机上打开，需要连接你们的空间。之后会记住授权，直接打开就能记录。</p>
     <form id="join-space"><label>开始方式<select id="join-mode"><option value="create">建立我们的空间</option><option value="join">加入 / 恢复已有空间</option></select></label>
-    <label>这台手机的身份<select id="join-person"><option value="0">第一位（我）</option><option value="1">第二位（你）</option></select></label>
+    <label>选择身份<select id="join-person" required><option value="" disabled selected>请选择身份</option><option value="0">身份：小獭</option><option value="1">身份：猫猫</option></select></label>
     <label>空间恢复码<textarea id="join-recovery" rows="3" autocomplete="off" autocapitalize="none" spellcheck="false" required></textarea></label>
     <p class="small" id="recovery-help">请先将恢复码存进你信任的密码管理器。它用于另一台手机加入和换机恢复，丢失后我们无法代找。</p>
     <label class="checkbox-label" id="recovery-confirm"><input id="recovery-saved" type="checkbox">我已在此网页之外保存恢复码</label>
     <label>访问令牌<input id="join-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="github_pat_…" required></label>
-    <details><summary>如何准备访问令牌？</summary><p class="small"><a href="${tokenLink}" target="_blank" rel="noopener noreferrer">打开 GitHub 创建页面</a>，Only select repositories 只选择 little-days-vault，Contents 选 Read and write。有效期建议先用 90 天。另一台手机也需要一次配置，可以使用同一私有空间的受限令牌。不要把令牌或恢复码发到聊天中。</p></details>
+    <details><summary>如何准备访问令牌？</summary><p class="small"><a href="${tokenLink}" target="_blank" rel="noopener noreferrer">打开 GitHub 创建页面</a>，Only select repositories 只选择 little-days-vault，Contents 选 Read and write。希望少更新授权，可以选择一年有效；已有三个月令牌也能继续使用。另一台手机也需要一次配置，可以使用同一私有空间的受限令牌。不要把令牌或恢复码发到聊天中。</p></details>
     <label id="restore-file-label" hidden>云端文件丢失时，从加密备份恢复（可选）<input id="restore-file" type="file" accept=".json,application/json"></label>
     <p class="small">这台手机会保存授权。能解锁手机并打开本页的人，也能查看记录。请在你自己的设备上使用。</p>
     <button class="primary" id="join-submit" type="submit">连接并记住此设备</button><p class="form-message" id="join-message" role="status"></p></form>`;
@@ -33,13 +33,14 @@ export async function initializeShared(onUpdate) {
   let generated=newRecovery();$('#join-recovery').value=generated;$('#join-recovery').readOnly=true;
   $('#join-mode').addEventListener('change',()=>{
     const create=$('#join-mode').value==='create';$('#join-recovery').readOnly=create;$('#join-recovery').value=create?generated:'';
-    $('#recovery-confirm').hidden=!create;$('#restore-file-label').hidden=create;$('#join-person').value=create?'0':'1';
+    $('#recovery-confirm').hidden=!create;$('#restore-file-label').hidden=create;
   });
   if(!current) await new Promise(resolve=>{
     $('#join-space').addEventListener('submit',async event=>{
       event.preventDefault();$('#join-message').textContent='正在连接…';$('#join-submit').disabled=true;
       try {
         const create=$('#join-mode').value==='create';
+        if(!['0','1'].includes($('#join-person').value)) throw new Error('请选择小獭或猫猫。');
         if(create && !$('#recovery-saved').checked) throw new Error('请先保存恢复码，并勾选确认。');
         const file=$('#restore-file').files[0];
         current=await journal.setup({token:$('#join-token').value.trim(),recovery:$('#join-recovery').value,active:Number($('#join-person').value),create,backup:file?await readBackup(file):null});
@@ -52,7 +53,7 @@ export async function initializeShared(onUpdate) {
   $('.demo-notice').innerHTML='<span id="sync-status" role="status">已在本机打开</span> <button id="sync-now" class="text-button">同步</button>';
   const card=document.createElement('div');card.className='settings-card full-width';
   card.innerHTML=`<h3>这台手机与我们的空间</h3><p>日记先保存在本机，联网后自动同步。两人共用一个私密空间；称呼用于区分作者，双方都持有空间访问权限。</p>
-    <label>我在这里的称呼<select id="device-person"></select></label><div class="device-actions"><button type="button" class="secondary" id="show-recovery">查看恢复码</button><button type="button" class="text-button" id="refresh-access">更新访问授权</button><button type="button" class="text-button danger" id="leave-device">退出此设备</button></div>
+    <label>这台手机的身份<select id="device-person"></select></label><div class="device-actions"><button type="button" class="secondary" id="show-recovery">查看恢复码</button><button type="button" class="text-button" id="refresh-access">更新访问授权</button><button type="button" class="text-button danger" id="leave-device">退出此设备</button></div>
     <p class="small">云端只保存加密记录。恢复码请独立保管；退出会清除这台浏览器里的记录、草稿和授权，云端内容保留。</p><div id="sync-conflicts"></div>`;
   $('.settings-grid').prepend(card);
   const dialog=document.createElement('dialog');dialog.id='device-dialog';
@@ -63,7 +64,7 @@ export async function initializeShared(onUpdate) {
   function renderStatus(message) {
     $('#sync-status').textContent=message || (current.pending?'已保存在本机 · 等待同步':`已同步${current.lastSync?' · '+new Date(current.lastSync).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):''}`);
     $('#sync-now').disabled=busy;
-    $('#device-person').replaceChildren(...current.state.people.map((name,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=name;return option;}));$('#device-person').value=String(current.active);
+    $('#device-person').replaceChildren(...current.state.people.map((name,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`身份：${name}`;return option;}));$('#device-person').value=String(current.active);
     const container=$('#sync-conflicts');container.replaceChildren();
     if(current.conflicts.length) {
       const heading=document.createElement('h3');heading.textContent=`有 ${current.conflicts.length} 处并行修改待确认`;container.append(heading);

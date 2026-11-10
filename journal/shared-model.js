@@ -7,7 +7,9 @@ export function canonical(value) {
   if(value && typeof value === 'object') return `{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
   return JSON.stringify(value);
 }
-export const blankState = () => ({version:2,title:'两个人的小日子',people:['我','你'],anniversary:'',entries:[],events:[]});
+export const DEFAULT_PEOPLE = ['小獭','猫猫'];
+export const displayPeople = people => people[0] === '我' && people[1] === '你' ? [...DEFAULT_PEOPLE] : people;
+export const blankState = () => ({version:2,title:'两个人的小日子',people:[...DEFAULT_PEOPLE],anniversary:'',entries:[],events:[]});
 export const blankDoc = space => ({format:'little-days-sync',version:1,space,clock:{},records:{}});
 const dotId = dot => `${dot.actor}:${dot.seq}`;
 const seen = (clock,dot) => (clock[dot.actor] || 0) >= dot.seq;
@@ -110,6 +112,7 @@ export function viewDoc(doc) {
   }
   for(const [field,target] of [['title','title'],['anniversary','anniversary']]) if(selected[`setting/${field}`] != null) state[target] = selected[`setting/${field}`];
   for(const person of [0,1]) if(selected[`setting/person${person}`] != null) state.people[person] = selected[`setting/person${person}`];
+  state.people = displayPeople(state.people);
   for(const [key,value] of Object.entries(selected)) {
     if(value === null) continue;
     if(key.startsWith('entry/')) {

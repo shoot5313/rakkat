@@ -1,7 +1,7 @@
 import { validateBackup } from './backup.js';
 import { eventKinds, validDate, daysBetween, nextOccurrence, occursOn, calendarDays, eventInputError, mergeEvents } from './dates.js';
 import { initializeShared } from './shared-ui.js';
-import { canonical } from './shared-model.js';
+import { canonical, DEFAULT_PEOPLE, displayPeople } from './shared-model.js';
 const isShared = document.body.dataset.shared === 'true';
 let shared, editingBase = null, eventEditingBase = null, detailBase = null, settingsBase;
 const $ = selector => document.querySelector(selector);
@@ -49,7 +49,7 @@ function mutate(update) {
 }
 function sampleState() {
   const now = Date.now();
-  return { version:2, title:'两个人的小日子', people:['我','你'], anniversary:'', events:[], entries:[
+  return { version:2, title:'两个人的小日子', people:[...DEFAULT_PEOPLE], anniversary:'', events:[], entries:[
     {id:uid(),author:0,date:dayBefore(0),title:'今天的晚风，适合一起走走',body:'下班的时候，发现天边是很淡的粉色。\n走到路口，忍不住想：要是你也在就好了。\n\n下次见面，我们绕一点远路回家吧。',mood:'想你',photos:[],comments:[{id:uid(),author:1,body:'好呀，顺便去买你喜欢的那家面包。',created:now}],likes:[1],created:now,updated:now,example:true},
     {id:uid(),author:1,date:dayBefore(1),title:'一起把普通日子过得亮一点',body:'想有一个地方，放那些不适合发朋友圈、但很想让你知道的小事。\n\n今天午饭很好吃，路边的猫很可爱，还有，我很想你。',mood:'晴朗',photos:[],comments:[],likes:[0],created:now-1000,updated:now-1000,example:true},
     {id:uid(),author:0,date:dayBefore(3),title:'记住一个小小的约定',body:'以后遇到开心的事，就在这里存一份。\n不开心的时候也可以来，慢慢说，我会听。',mood:'平静',photos:[],comments:[],likes:[],created:now-2000,updated:now-2000,example:true}
@@ -60,8 +60,9 @@ function avatar(author) { return `<span class="avatar ${author ? 'partner' : ''}
 function entryTop(entry) { return `<div class="card-top">${avatar(entry.author)}<span>${escape(state.people[entry.author])}</span>${entry.example ? '<span class="example">示例</span>' : ''}<span class="date">${prettyDate(entry.date)}</span></div>`; }
 function empty(title,subtitle,symbol='♡') { return `<div class="empty"><span class="empty-symbol">${symbol}</span>${title}<p>${subtitle}</p></div>`; }
 function render() {
+  state.people = displayPeople(state.people);
   document.title = state.title;
-  $('#identity').innerHTML = `${avatar(active)}<span>${escape(state.people[active])}</span><span class="switch-hint">切换体验身份 ⇄</span>`;
+  $('#identity').innerHTML = `${avatar(active)}<span>身份：${escape(state.people[active])}</span><span class="switch-hint">切换体验身份 ⇄</span>`;
   $('#identity').title = isShared ? '在我们的空间中设置本机身份' : '切换演示身份';
   const heroTitle = $('.hero h1');
   if(state.title === '两个人的小日子') heroTitle.innerHTML = '两个人的<span>小日子。</span>'; else heroTitle.textContent = state.title;
