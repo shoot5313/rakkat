@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f1f7f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="把平凡的一天，写给喜欢的人。属于两个人的文字日记。">
+  <title>两个人的小日子</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" type="module"></script>
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'"><link rel="stylesheet" href="./shared.css"></head>
+<body data-shared="true">
+  <div class="demo-notice">文字体验版 · 内容仅存当前浏览器，尚未加密或双人同步</div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="#diary" class="brand"><img src="./icon.svg" alt="" width="36" height="36"><span>小日子<small>OUR LITTLE DAYS</small></span></a>
+      <button id="identity" class="identity" title="切换演示身份"></button>
+    </header>
+    <main id="main" tabindex="-1">
+      <section class="hero">
+        <div><p class="eyebrow">JUST YOU & ME</p><h1>两个人的<span>小日子。</span></h1><p class="hero-copy">有些事很小，小到只想讲给你听。</p><button class="primary" id="new-entry"><span aria-hidden="true">＋</span> 记下今天</button></div>
+        <div class="hero-art" aria-hidden="true"><div class="paper paper-back"></div><div class="paper paper-front"><span class="paper-date">DEAR, YOU</span><span class="flower">✳</span><span class="paper-note">普通的一天<br>因为你，值得记住。</span><span class="paper-line"></span><span class="paper-line short"></span><span class="paper-heart">♡</span></div><div class="art-caption">a little note, a little love.</div></div>
+      </section>
+      <nav class="tabs" aria-label="空间导航">
+        <button data-tab="diary" aria-current="page">日记</button><button data-tab="dates">纪念日</button><button data-tab="space">我们的空间</button>
+        <span class="tabs-note">把日子慢慢收藏</span>
+      </nav>
+      <section id="diary-panel" class="panel">
+        <div class="section-heading"><div><p class="eyebrow">THE EVERYDAY COLLECTION</p><h2>最近的小事</h2></div><div id="filters" class="filters"><button data-filter="all" class="selected">全部</button><button data-filter="0">我写的</button><button data-filter="1">对方写的</button></div></div>
+        <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="找找某一天、某句话…" aria-label="搜索日记"></label>
+        <div id="entries" class="entries"></div>
+      </section>
+      <section id="dates-panel" class="panel" hidden>
+        <div class="section-heading"><div><p class="eyebrow">DAYS WE HOLD CLOSE</p><h2>值得记住的日子</h2></div><button class="primary" id="new-event">＋ 记个日子</button></div>
+        <p class="dates-intro">期待下一次见面，也记住每一次小小的照顾。</p>
+        <div id="date-highlights" class="date-highlights"></div>
+        <div class="calendar-layout">
+          <section class="calendar-card" aria-label="日历">
+            <div class="calendar-toolbar"><h3 id="calendar-month" aria-live="polite"></h3><div><button class="icon-button" id="month-prev" aria-label="上个月">‹</button><button class="text-button" id="month-today">今天</button><button class="icon-button" id="month-next" aria-label="下个月">›</button></div></div>
+            <div class="calendar-week" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+            <div id="calendar-days" class="calendar-days" aria-label="选择日期"></div>
+            <div class="calendar-legend"><span><i class="event-dot meeting"></i>见面</span><span><i class="event-dot period"></i>经期</span><span><i class="event-dot anniversary"></i>纪念日</span><span><i class="event-dot other"></i>其他</span></div>
+          </section>
+          <section class="day-card"><p class="eyebrow">ON THIS DAY</p><h3 id="selected-day"></h3><div id="day-events"></div><button class="text-button" id="add-on-day">＋ 为这一天添加记录</button></section>
+        </div>
+        <div class="section-heading event-list-heading"><h2>我们的日子簿</h2><div class="filters" aria-label="筛选日期记录"><button data-event-filter="all" class="selected">全部</button><button data-event-filter="meeting">见面</button><button data-event-filter="period">经期</button><button data-event-filter="anniversary">纪念日</button><button data-event-filter="other">其他</button></div></div>
+        <div id="event-list" class="event-list"></div>
+      </section>
+      <section id="space-panel" class="panel" hidden>
+        <div class="section-heading"><div><p class="eyebrow">A PLACE FOR TWO</p><h2>我们的空间</h2></div></div>
+        <div class="settings-grid"><form id="settings" class="settings-card"><h3>给小日子一个名字</h3><label>空间名称<input name="title" maxlength="24" required></label><div class="form-row"><label>第一位的称呼<input name="person0" maxlength="12" required></label><label>第二位的称呼<input name="person1" maxlength="12" required></label></div><label>在一起的日子（可选）<input name="anniversary" type="date"></label><button class="primary" type="submit">保存设置</button></form>
+        <div class="settings-card"><h3>把回忆带在身边</h3><p>导出文字日记、留言、纪念日和经期记录的完整备份，换设备时可以导入。</p><button class="secondary" id="export">导出完整备份</button><button class="text-button" id="import">从备份导入</button><input id="import-file" type="file" accept=".json,application/json" hidden><p class="small">备份文件未加密，请保存在你信任的位置。导入会合并记录，同一条记录保留更新时间较新的版本。</p></div>
+        <div class="settings-card full-width"><span class="status-dot"></span><strong>现在是本地体验空间</strong><p>切换身份可以体验两个人互相留言；这还不是账号登录。记录保存在当前浏览器中，清除网站数据会丢失，请及时导出。正式双人版还需要账号、跨设备同步、加密和自动备份。</p><div id="stats" class="stats"></div><p id="legacy-photos" class="small" hidden></p><button class="text-button danger" id="clear-examples">移除示例日记</button></div></div>
+      </section>
+      <footer>日子不用很特别，记得就很好。<span>MADE FOR TWO ♡</span></footer>
+    </main>
+  </div>
+  <dialog id="editor" class="editor-dialog"><form id="entry-form">
+    <div class="dialog-head"><div><p class="eyebrow">A NOTE TO YOU</p><h2 id="editor-heading">今天想告诉你…</h2></div><button type="button" class="icon-button" data-close="editor" aria-label="关闭编辑器">×</button></div>
+    <div class="form-row editor-meta"><label>记录日期<input type="date" id="entry-date" required></label><label>今天的心情<select id="entry-mood"><option>晴朗</option><option>想你</option><option>平静</option><option>开心</option><option>有点累</option><option>小情绪</option></select></label></div>
+    <input id="entry-title" class="title-input" maxlength="80" placeholder="给今天起个小标题（可选）" aria-label="日记标题">
+    <textarea id="entry-body" maxlength="20000" placeholder="发生了什么？想到了什么？或者，只是突然很想你。" aria-label="日记正文"></textarea>
+    <div class="dialog-bottom"><span class="small" id="draft-status">写给对方，也留给未来的我们。</span><button class="primary" id="save-entry" type="submit">收进日记本</button></div>
+  </form></dialog>
+  <dialog id="detail" class="detail-dialog"><div class="dialog-head"><span class="eyebrow">A DAY TO REMEMBER</span><button class="icon-button" data-close="detail" aria-label="关闭日记">×</button></div><div id="detail-content"></div></dialog>
+  <dialog id="event-editor"><form id="event-form">
+    <div class="dialog-head"><div><p class="eyebrow">SAVE A LITTLE DAY</p><h2 id="event-editor-heading">记住一个日子</h2></div><button type="button" class="icon-button" data-close="event-editor" aria-label="关闭日期记录">×</button></div>
+    <div class="form-row editor-meta"><label>是什么日子<select id="event-kind"><option value="meeting">见面</option><option value="period">经期</option><option value="anniversary">纪念日</option><option value="other">其他</option></select></label><label id="event-subject-label" hidden>为谁记录<select id="event-subject"></select></label></div>
+    <label class="event-label">名称（可选）<input id="event-title" maxlength="80" placeholder="比如：周末见面、第一次旅行"></label>
+    <div class="form-row editor-meta"><label><span id="event-start-label">日期</span><input id="event-start" type="date" min="1900-01-01" max="9999-12-31" required></label><label id="event-end-label"><span>结束日期（可选）</span><input id="event-end" type="date" min="1900-01-01" max="9999-12-31"></label></div>
+    <label id="event-yearly-label" class="checkbox-label" hidden><input id="event-yearly" type="checkbox">每年记住这一天</label>
+    <p id="event-hint" class="small"></p>
+    <label class="event-label note-label">留一点备注<textarea id="event-note" maxlength="2000" placeholder="想做的事、当天的感受，或想给对方的小提醒。"></textarea></label>
+    <div class="event-controls"><button type="button" class="text-button danger" id="delete-event" hidden>删除记录</button><button type="button" class="secondary" id="end-period" hidden>今天结束</button><button class="primary" type="submit" id="save-event">保存这个日子</button></div>
+  </form></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -6,6 +6,6 @@
 
 界面采用浅蓝绿色，适合在手机上慢慢记录。
 
-[打开小日子](https://shoot5313.github.io/little-days-connect/)
+[打开小日子](https://shoot5313.github.io/little-days-connect/journal/)
 
-目前开放连接测试，日记功能正在准备中。
+首个双人体验版本已开放，欢迎用手机记录你们的小日子。
