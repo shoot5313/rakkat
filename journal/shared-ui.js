@@ -15,17 +15,15 @@ export async function initializeShared(onUpdate) {
   const store=await new DeviceStore().open(),journal=new SharedJournal(store);
   let current=await journal.snapshot(),timer,busy=false;
   $('.app-shell').hidden=true;
-  $('.demo-notice').textContent='rakkat · 正在打开你的空间';
+  $('.demo-notice').hidden=true;
   const welcome=document.createElement('section');welcome.className='welcome settings-card';
-  welcome.innerHTML=`<p class="eyebrow">A PLACE FOR TWO</p><h1>从今天起，<br>把小事写给彼此。</h1><p>在这台手机上连接一次，以后直接打开就能记录。</p>
+  welcome.innerHTML=`<h1>rakkat</h1>
     <form id="join-space"><label>开始方式<select id="join-mode"><option value="create">建立我们的空间</option><option value="join">加入 / 恢复已有空间</option></select></label>
     <label>选择身份<select id="join-person" required><option value="" disabled selected>请选择身份</option><option value="0">身份：小獭</option><option value="1">身份：猫猫</option></select></label>
     <label>空间恢复码<textarea id="join-recovery" rows="3" autocomplete="off" autocapitalize="none" spellcheck="false" required></textarea></label>
-    <p class="small" id="recovery-help">请另行保存恢复码，另一台手机加入和换机时会用到。丢失后无法代找。</p>
-    <label class="checkbox-label" id="recovery-confirm"><input id="recovery-saved" type="checkbox">我已在此网页之外保存恢复码</label>
+    <label class="checkbox-label" id="recovery-confirm"><input id="recovery-saved" type="checkbox">我已保存恢复码</label>
     <label>访问令牌<input id="join-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="粘贴已准备好的令牌" required></label>
     <label id="restore-file-label" hidden>云端文件丢失时，从加密备份恢复（可选）<input id="restore-file" type="file" accept=".json,application/json"></label>
-    <p class="small">这台手机会记住连接，请在自己的设备上使用。</p>
     <button class="primary" id="join-submit" type="submit">连接并记住此设备</button><p class="form-message" id="join-message" role="status"></p></form>`;
   document.body.prepend(welcome);
   let generated=newRecovery();$('#join-recovery').value=generated;$('#join-recovery').readOnly=true;
@@ -49,6 +47,7 @@ export async function initializeShared(onUpdate) {
   });
   welcome.remove();$('.app-shell').hidden=false;
   $('.demo-notice').innerHTML='<span id="sync-status" role="status">已在本机打开</span> <button id="sync-now" class="text-button">同步</button>';
+  $('.demo-notice').hidden=false;
   const card=document.createElement('div');card.className='settings-card full-width';
   card.innerHTML=`<h3>这台手机与我们的空间</h3><p>日记先保存在这台手机，联网后自动同步。</p>
     <label>这台手机的身份<select id="device-person"></select></label><div class="device-actions"><button type="button" class="secondary" id="show-recovery">查看恢复码</button><button type="button" class="text-button" id="refresh-access">更新访问授权</button><button type="button" class="text-button danger" id="leave-device">退出此设备</button></div>
