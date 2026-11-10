@@ -49,7 +49,7 @@ function mutate(update) {
 }
 function sampleState() {
   const now = Date.now();
-  return { version:2, title:'两个人的小日子', people:[...DEFAULT_PEOPLE], anniversary:'', events:[], entries:[
+  return { version:2, title:'rakkat', people:[...DEFAULT_PEOPLE], anniversary:'', events:[], entries:[
     {id:uid(),author:0,date:dayBefore(0),title:'今天的晚风，适合一起走走',body:'下班的时候，发现天边是很淡的粉色。\n走到路口，忍不住想：要是你也在就好了。\n\n下次见面，我们绕一点远路回家吧。',mood:'想你',photos:[],comments:[{id:uid(),author:1,body:'好呀，顺便去买你喜欢的那家面包。',created:now}],likes:[1],created:now,updated:now,example:true},
     {id:uid(),author:1,date:dayBefore(1),title:'一起把普通日子过得亮一点',body:'想有一个地方，放那些不适合发朋友圈、但很想让你知道的小事。\n\n今天午饭很好吃，路边的猫很可爱，还有，我很想你。',mood:'晴朗',photos:[],comments:[],likes:[0],created:now-1000,updated:now-1000,example:true},
     {id:uid(),author:0,date:dayBefore(3),title:'记住一个小小的约定',body:'以后遇到开心的事，就在这里存一份。\n不开心的时候也可以来，慢慢说，我会听。',mood:'平静',photos:[],comments:[],likes:[],created:now-2000,updated:now-2000,example:true}
@@ -61,14 +61,15 @@ function entryTop(entry) { return `<div class="card-top">${avatar(entry.author)}
 function empty(title,subtitle,symbol='♡') { return `<div class="empty"><span class="empty-symbol">${symbol}</span>${title}<p>${subtitle}</p></div>`; }
 function render() {
   state.people = displayPeople(state.people);
-  document.title = state.title;
+  const title = ['两个人的小日子','小日子'].includes(state.title) ? 'rakkat' : state.title;
+  document.title = title;
   $('#identity').innerHTML = `${avatar(active)}<span>身份：${escape(state.people[active])}</span><span class="switch-hint">切换体验身份 ⇄</span>`;
   $('#identity').title = isShared ? '在我们的空间中设置本机身份' : '切换演示身份';
   const heroTitle = $('.hero h1');
-  if(state.title === '两个人的小日子') heroTitle.innerHTML = '两个人的<span>小日子。</span>'; else heroTitle.textContent = state.title;
+  if(title === 'rakkat') heroTitle.innerHTML = '<span>rakkat</span>'; else heroTitle.textContent = title;
   renderEntries(); renderDates();
   if(!$('#settings').contains(document.activeElement) && !$('#settings').dataset.dirty) {
-    $('#settings').elements.title.value = state.title;
+    $('#settings').elements.title.value = title;
     $('#settings').elements.person0.value = state.people[0];
     $('#settings').elements.person1.value = state.people[1];
     $('#settings').elements.anniversary.value = state.anniversary;
@@ -244,7 +245,7 @@ function bindEvents() {
         if(shared) {await mutationQueue;await shared.export();toast('加密备份已生成，请另外保存恢复码。');return;}
         await mutationQueue; const latest = await read('state');
         const blob = new Blob([JSON.stringify({...latest,format:'little-days-backup',exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
-        const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `小日子备份-${today()}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url),60000); toast('已生成备份文件，请妥善保存。');
+        const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `rakkat备份-${today()}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url),60000); toast('已生成备份文件，请妥善保存。');
       }
       if(target.id === 'import') $('#import-file').click();
       if(target.id === 'clear-examples' && confirm('移除所有示例日记？你自己新写的日记会保留。')) { await mutate(data => data.entries.forEach(entry => { if(entry.example) { entry.deleted = true; entry.updated = Date.now(); } })); toast('示例已移除，现在从你们的第一天开始。'); }
@@ -286,7 +287,7 @@ function bindEvents() {
         else data.entries.push({...value,id:uid(),author:active,comments:[],likes:[],created:now,updated:now,example:false});
       });
       if(!editingId) { try { await write(`draft-${active}`,null); } catch { toast('日记已保存，但草稿未能清除。'); } }
-      $('#editor').close(); setTab('diary'); toast('又一个小日子，被好好收起来了。');
+      $('#editor').close(); setTab('diary'); toast('今天的记录，被好好收起来了。');
     } catch(error) { toast(`保存未完成：${error.message || '内容仍在编辑器中，请稍后重试。'}`); }
     finally { $('#save-entry').disabled = false; }
   });

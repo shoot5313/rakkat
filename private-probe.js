@@ -13,7 +13,7 @@ $('#run').addEventListener('click',async()=>{
   try {
     const result=await privateCheck(token,{onProgress:(step,message)=>{const node=$(`#${step}-result`);node.textContent=message;node.dataset.state=message.startsWith('通过')?'ok':'';}});
     $('#summary').textContent=result.message;
-    report=['小日子私有读写检查',new Date().toLocaleString(),`网络：${network}；代理 / VPN：已关闭（手动确认）`,...steps.map(step=>$(`#${step}-result`).parentNode.textContent),result.message,`测试文件：${result.cleanup}`].join('\n');
+    report=['rakkat私有读写检查',new Date().toLocaleString(),`网络：${network}；代理 / VPN：已关闭（手动确认）`,...steps.map(step=>$(`#${step}-result`).parentNode.textContent),result.message,`测试文件：${result.cleanup}`].join('\n');
     $('#report').value=report;$('#copy').hidden=false;$('#hint').textContent='检查结束，输入框已清空。可复制结果，报告中不包含令牌。';
   } catch {$('#summary').textContent='本次测试未完成，没有确认读写成功。';}
   finally {token='';$('#token').value='';$('#run').disabled=false;$('#network').disabled=false;$('#token').disabled=false;$('#vpn-off').disabled=false;}

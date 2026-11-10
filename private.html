@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f1f7f6"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>小日子 · 私有读写检查</title><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./private.css"><script type="module" src="./private-probe.js"></script>
+  <title>rakkat · 私有读写检查</title><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./private.css"><script type="module" src="./private-probe.js"></script>
 </head>
 <body><main>
-  <div class="brand"><span class="mark" aria-hidden="true">♡</span><span>小日子<small>OUR LITTLE DAYS</small></span></div>
+  <div class="brand"><span class="mark" aria-hidden="true">♡</span><span>rakkat<small>OUR LITTLE DAYS</small></span></div>
   <p class="eyebrow">再确认，记录能被好好保存。</p>
   <h1>检查私有空间的<br>保存与读取。</h1>
   <p class="intro">公开接口限流不等于网络不通。这一步用受限权限，验证一条虚构加密记录的上传、读回和清理。</p>
@@ -14,7 +14,7 @@
     <h2>先准备一个短期访问令牌</h2>
     <p>在 GitHub 官方页面创建 Fine-grained token，只选择 <strong>little-days-vault</strong>，Contents 设为 <strong>Read and write</strong>。有效期先用 7 天，其他权限保持默认。</p>
     <p><a href="https://github.com/settings/personal-access-tokens/new?name=LittleDays-connect-check&amp;description=Private%20encrypted%20connection%20test%20only&amp;target_name=shoot5313&amp;expires_in=7&amp;contents=write" target="_blank" rel="noopener noreferrer">打开 GitHub 官方创建页面 ↗</a></p>
-    <p class="summary">在 Repository access 中选 Only select repositories，再选 little-days-vault。不要选择 All repositories，也不要授权存放本测试网页的 little-days-connect。</p>
+    <p class="summary">在 Repository access 中选 Only select repositories，再选 little-days-vault。不要选择 All repositories，也不要授权存放本测试网页的 rakkat。</p>
   </section>
   <section aria-labelledby="private-title">
     <h2 id="private-title">关闭代理 / VPN 后检查</h2>

@@ -15,7 +15,7 @@ export async function initializeShared(onUpdate) {
   const store=await new DeviceStore().open(),journal=new SharedJournal(store);
   let current=await journal.snapshot(),timer,busy=false;
   $('.app-shell').hidden=true;
-  $('.demo-notice').textContent='小日子 · 正在打开你的空间';
+  $('.demo-notice').textContent='rakkat · 正在打开你的空间';
   const welcome=document.createElement('section');welcome.className='welcome settings-card';
   welcome.innerHTML=`<p class="eyebrow">A PLACE FOR TWO</p><h1>从今天起，<br>把小事写给彼此。</h1><p>在这台手机上连接一次，以后直接打开就能记录。</p>
     <form id="join-space"><label>开始方式<select id="join-mode"><option value="create">建立我们的空间</option><option value="join">加入 / 恢复已有空间</option></select></label>
@@ -114,5 +114,5 @@ export async function initializeShared(onUpdate) {
   window.addEventListener('online',()=>void sync());
   setInterval(()=>{if(document.visibilityState==='visible' && !document.querySelector('dialog[open]'))void sync();},60000);
   renderStatus();setTimeout(()=>void sync(),0);
-  return {journal,current,changed:async()=>{emit(await journal.snapshot());schedule();},export:async()=>download(await journal.exportBackup(),`小日子加密备份-${new Date().toISOString().slice(0,10)}.json`),import:async file=>{emit(await journal.importBackup(await readBackup(file)));schedule();}};
+  return {journal,current,changed:async()=>{emit(await journal.snapshot());schedule();},export:async()=>download(await journal.exportBackup(),`rakkat加密备份-${new Date().toISOString().slice(0,10)}.json`),import:async file=>{emit(await journal.importBackup(await readBackup(file)));schedule();}};
 }

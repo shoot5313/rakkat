@@ -1,5 +1,5 @@
 export const marker = 'little-days-connect-v1';
-export const repository = 'shoot5313/little-days-connect';
+export const repository = 'shoot5313/rakkat';
 
 export function probes(base) {
   const stamp = String(Date.now());

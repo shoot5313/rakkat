@@ -18,7 +18,7 @@ $('#run').addEventListener('click',async()=>{
   }
   const summary=conclusion(results);
   $('#summary').textContent=summary;
-  report=[`小日子 GitHub 连接检查`,new Date().toLocaleString(),`网络：${mode}；代理 / VPN：已关闭（手动确认）`,...items.map((item,i)=>`${item.label}：${results[i].detail}`),summary].join('\n');
+  report=[`rakkat GitHub 连接检查`,new Date().toLocaleString(),`网络：${mode}；代理 / VPN：已关闭（手动确认）`,...items.map((item,i)=>`${item.label}：${results[i].detail}`),summary].join('\n');
   $('#report').value=report; $('#copy').hidden=false;
   $('#hint').textContent='检查完成，可以复制结果发给协助部署的人。';
   $('#run').disabled=false;$('#network').disabled=false;$('#vpn-off').disabled=false;

@@ -9,7 +9,7 @@ export function canonical(value) {
 }
 export const DEFAULT_PEOPLE = ['小獭','猫猫'];
 export const displayPeople = people => people[0] === '我' && people[1] === '你' ? [...DEFAULT_PEOPLE] : people;
-export const blankState = () => ({version:2,title:'两个人的小日子',people:[...DEFAULT_PEOPLE],anniversary:'',entries:[],events:[]});
+export const blankState = () => ({version:2,title:'rakkat',people:[...DEFAULT_PEOPLE],anniversary:'',entries:[],events:[]});
 export const blankDoc = space => ({format:'little-days-sync',version:1,space,clock:{},records:{}});
 const dotId = dot => `${dot.actor}:${dot.seq}`;
 const seen = (clock,dot) => (clock[dot.actor] || 0) >= dot.seq;
