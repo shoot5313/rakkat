@@ -7,7 +7,7 @@ export class ApiError extends Error {
 }
 export class VaultApi {
   constructor(token,{fetchFn=globalThis.fetch,timeout=15000}={}) {
-    if(!validToken(token)) throw new Error('请输入以 github_pat_ 开头、只授权私有仓库的访问令牌。');
+    if(!validToken(token)) throw new Error('访问令牌格式不正确，请粘贴已准备好的完整令牌。');
     // Native browser fetch requires a Window/Worker receiver, not a VaultApi instance.
     this.token=token;this.fetchFn=fetchFn.bind(globalThis);this.timeout=timeout;
   }
@@ -31,19 +31,19 @@ export class VaultApi {
         }
         if(response.status===401) throw new ApiError('访问授权已失效。请在「我们的空间」更新令牌，本机记录仍然保留。',401);
         if(response.status===409 || response.status===422) throw new ApiError('云端内容刚有变化，正在合并。',response.status);
-        if(response.status===404) throw new ApiError('找不到私有空间，请检查令牌是否授权 little-days-vault。',404);
+        if(response.status===404) throw new ApiError('找不到空间，请检查访问令牌的授权。',404);
         throw new ApiError(`连接暂时失败（${response.status}），本机记录仍然保留。`,response.status);
       }
       const text=await response.text();
-      if(text.length > MAX_BYTES*2+200000) throw new ApiError(`${step.name}返回的文件超过容量限制。（${step.code}-SIZE）`,response.status,0,`${step.code}-SIZE`);
+      if(text.length > MAX_BYTES*2+200000) throw new ApiError(`${step.name}返回的文件超过容量限制。`,response.status,0,`${step.code}-SIZE`);
       if(raw)return text;
       try {return JSON.parse(text);}
-      catch {throw new ApiError(`${step.name}时收到的内容格式异常，请稍后重试。（${step.code}-FORMAT）`,response.status,0,`${step.code}-FORMAT`);}
+      catch {throw new ApiError(`${step.name}时收到的内容格式异常，请稍后重试。`,response.status,0,`${step.code}-FORMAT`);}
     } catch(error) {
       if(error instanceof ApiError) throw error;
       const kind=controller.signal.aborted?'TIMEOUT':received?'BODY':'NET';
-      const reason=controller.signal.aborted?'连接超时':received?'响应读取中断':'未能连接到 GitHub';
-      throw new ApiError(`${step.name}时${reason}，请稍后重试。已保存的本机记录仍保留。（${step.code}-${kind}）`,0,0,`${step.code}-${kind}`);
+      const reason=controller.signal.aborted?'连接超时':received?'响应读取中断':'未能连上';
+      throw new ApiError(`${step.name}时${reason}，请稍后重试。已保存的本机记录仍保留。`,0,0,`${step.code}-${kind}`);
     } finally {clearTimeout(timer);}
   }
   async verifyPrivate() {
@@ -59,7 +59,7 @@ export class VaultApi {
     else if(file.encoding==='none') text=await this.request('GET',`/git/blobs/${file.sha}`,undefined,{raw:true});
     else throw new Error('云端文件编码不正确。');
     try {return {sha:file.sha,envelope:JSON.parse(text)};}
-    catch {throw new ApiError('空间文件格式异常，未修改现有记录。（C2-FORMAT）',200,0,'C2-FORMAT');}
+    catch {throw new ApiError('空间文件格式异常，未修改现有记录。',200,0,'C2-FORMAT');}
   }
   async write(envelope,sha) {
     const content=base64(new TextEncoder().encode(JSON.stringify(envelope)));

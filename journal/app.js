@@ -338,7 +338,7 @@ async function start() {
     state=shared.current.state;active=shared.current.active;
     const backupCard=$('#export').closest('.settings-card');
     backupCard.querySelector('p').textContent='保存一份加密的日记、留言和日期记录备份。恢复时需要空间恢复码；未发布的草稿仅留在本机。';
-    backupCard.querySelector('.small').textContent='备份不包含访问令牌。请将恢复码另存到密码管理器；导入会保留并行版本，等待你们选择。';
+    backupCard.querySelector('.small').textContent='请另外保存恢复码。导入时会保留不同版本，供你们选择。';
     $('#export').textContent='导出加密备份';$('#import').textContent='合并加密备份';
     const localCard=$('#stats').closest('.settings-card');localCard.querySelector('strong').textContent='属于你们的共享空间';
     localCard.querySelector('p').textContent='蓝绿色的小空间，留住文字、悄悄话和重要的日期。保存后留意页面顶部的同步状态。';
