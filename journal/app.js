@@ -13,6 +13,7 @@ const dayBefore = days => { const date = new Date(); date.setDate(date.getDate()
 const prettyDate = value => { const [year,month,day] = value.split('-'); return `${year}.${month}.${day}`; };
 let db, state, tab = 'diary', filter = 'all', active = 0, editingId = null, openId = null, attachments = [], draftTimer, toastTimer;
 let mutationQueue = Promise.resolve();
+let entryLimit = 60;
 let eventFilter = 'all', selectedDay = today(), calendarMonth = today().slice(0,7), editingEventId = null;
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel(isShared ? 'little-days-shared' : 'little-days') : null;
 
@@ -88,7 +89,8 @@ function renderEntries() {
   const query = $('#search').value.trim().toLocaleLowerCase();
   const author = filter === 'all' ? null : filter === '0' ? active : 1-active;
   const entries = visibleEntries().filter(entry => (author === null || entry.author === author) && `${entry.title}\n${entry.body}\n${entry.date}\n${entry.mood}`.toLocaleLowerCase().includes(query));
-  $('#entries').innerHTML = entries.length ? entries.map(entry => `<button class="entry-card" data-entry="${entry.id}" aria-label="阅读：${escape(entry.title || entry.date)}">${entryTop(entry)}<h3>${escape(entry.title || '今天的小记')}</h3><p class="entry-excerpt">${escape(entry.body)}</p><div class="card-bottom"><span class="mood">${entry.mood === '晴朗' ? '☀' : '◌'} ${escape(entry.mood)}</span><span>${entry.likes.length ? `♡ ${entry.likes.length} · ` : ''}${entry.comments.length ? `${entry.comments.length} 条悄悄话` : '留一句悄悄话 ↗'}</span></div></button>`).join('') : empty(query ? '还没找到这段回忆' : '这一页，等你来写',query ? '换个词试试，或者清空搜索。' : '点一下「记下今天」，留住第一件小事。');
+  $('#entries').innerHTML = entries.length ? entries.slice(0,entryLimit).map(entry => `<button class="entry-card" data-entry="${entry.id}" aria-label="阅读：${escape(entry.title || entry.date)}">${entryTop(entry)}<h3>${escape(entry.title || '今天的小记')}</h3><p class="entry-excerpt">${escape(entry.body)}</p><div class="card-bottom"><span class="mood">${entry.mood === '晴朗' ? '☀' : '◌'} ${escape(entry.mood)}</span><span>${entry.likes.length ? `♡ ${entry.likes.length} · ` : ''}${entry.comments.length ? `${entry.comments.length} 条悄悄话` : '留一句悄悄话 ↗'}</span></div></button>`).join('') : empty(query ? '还没找到这段回忆' : '这一页，等你来写',query ? '换个词试试，或者清空搜索。' : '点一下「记下今天」，留住第一件小事。');
+  if(entries.length>entryLimit)$('#entries').insertAdjacentHTML('beforeend','<button class="secondary" id="more-entries">显示更多日记</button>');
 }
 function setTab(value) {
   tab = ['diary','dates','space'].includes(value) ? value : 'diary';
@@ -235,7 +237,8 @@ function bindEvents() {
       }
       if(target.dataset.close) closeDialog(target.dataset.close);
       if(target.dataset.entry) showDetail(target.dataset.entry);
-      if(target.dataset.filter) { filter = target.dataset.filter; document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('selected',button === target)); renderEntries(); }
+      if(target.id === 'more-entries') {entryLimit+=60;renderEntries();}
+      if(target.dataset.filter) { entryLimit=60;filter = target.dataset.filter; document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('selected',button === target)); renderEntries(); }
       if(target.id === 'identity') { if(shared) {setTab('space');$('#device-person').focus();} else {active = 1-active; render(); toast(`正在体验「${state.people[active]}」的视角`);} }
       if(target.id === 'new-entry') await openEditor();
       if(target.id === 'like-entry') { await mutate(data => { const entry = data.entries.find(item => item.id === openId && !item.deleted); if(!entry) throw new Error('日记已删除'); entry.likes = entry.likes.includes(active) ? entry.likes.filter(person => person !== active) : [...entry.likes,active]; entry.updated = Date.now(); }); showDetail(openId); }
@@ -251,7 +254,7 @@ function bindEvents() {
       if(target.id === 'clear-examples' && confirm('移除所有示例日记？你自己新写的日记会保留。')) { await mutate(data => data.entries.forEach(entry => { if(entry.example) { entry.deleted = true; entry.updated = Date.now(); } })); toast('示例已移除，现在从你们的第一天开始。'); }
     } catch(error) { toast(`操作未完成：${error.message || '请检查浏览器存储空间。'}`); }
   });
-  $('#search').addEventListener('input',renderEntries);
+  $('#search').addEventListener('input',()=>{entryLimit=60;renderEntries();});
   ['#event-kind','#event-yearly','#event-start','#event-end'].forEach(selector => $(selector).addEventListener('change',updateEventFields));
   $('#event-editor').addEventListener('cancel',event => { event.preventDefault(); closeDialog('event-editor'); });
   $('#event-form').addEventListener('submit',async event => {

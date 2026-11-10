@@ -13,7 +13,7 @@ export class VaultApi {
   }
   async request(method,path,body,{missing=false,raw=false}={}) {
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),this.timeout);
-    const step=method==='PUT'?{name:'保存记录',code:'C3'}:path.startsWith('/contents/') || path.startsWith('/git/blobs/')?{name:'读取空间',code:'C2'}:{name:'确认访问权限',code:'C1'};
+    const step=method!=='GET'?{name:'保存记录',code:'C3'}:path?{name:'读取空间',code:'C2'}:{name:'确认访问权限',code:'C1'};
     let received=false;
     try {
       const response=await this.fetchFn(`https://api.github.com/repos/${REPOSITORY}${path}`,{
@@ -49,11 +49,21 @@ export class VaultApi {
   async verifyPrivate() {
     const repo=await this.request('GET','');
     if(repo?.private!==true || repo.full_name?.toLowerCase()!==REPOSITORY) throw new Error('云端仓库不是预期的私有空间，已停止同步。');
+    this.branch=repo.default_branch||'main';
+    this.repositoryBytes=Number.isFinite(repo.size)?repo.size*1024:null;
   }
   async read() {
-    const file=await this.request('GET',`/contents/${DATA_PATH}?t=${Date.now()}`,undefined,{missing:true});
+    const ref=await this.request('GET',`/git/ref/heads/${encodeURIComponent(this.branch||'main')}?t=${Date.now()}`);
+    if(!/^[a-f0-9]{40,64}$/i.test(ref?.object?.sha||''))throw new Error('未能确认云端版本，已停止同步。');
+    this.head=ref.object.sha;
+    const file=await this.readFile(DATA_PATH,this.head,{missing:true});
+    return file?{...file,head:this.head}:null;
+  }
+  async readFile(path,head,{missing=false}={}) {
+    if(!/^[a-f0-9]{40,64}$/i.test(head||''))throw new Error('云端版本不正确。');
+    const file=await this.request('GET',`/contents/${path}?ref=${head}`,undefined,{missing});
     if(!file) return null;
-    if(file.type!=='file' || file.path!==DATA_PATH || !/^[a-f0-9]{40,64}$/i.test(file.sha || '') || file.size>MAX_BYTES*1.4+1000) throw new Error('云端文件格式或大小异常。');
+    if(file.type!=='file' || file.path!==path || !/^[a-f0-9]{40,64}$/i.test(file.sha || '') || file.size>MAX_BYTES*1.4+1000) throw new Error('云端文件格式或大小异常。');
     let text;
     if(file.encoding==='base64') text=new TextDecoder('utf-8',{fatal:true}).decode(unbase64(file.content));
     else if(file.encoding==='none') text=await this.request('GET',`/git/blobs/${file.sha}`,undefined,{raw:true});
@@ -66,5 +76,19 @@ export class VaultApi {
     const written=await this.request('PUT',`/contents/${DATA_PATH}`,{message:'Save encrypted journal',content,...(sha?{sha}:{})});
     if(!/^[a-f0-9]{40,64}$/i.test(written?.content?.sha || '')) throw new Error('未收到保存确认，稍后会重新核对云端内容。');
     return written.content.sha;
+  }
+  async writeFiles(changes,remote) {
+    const head=remote?.head||this.head;
+    if(!/^[a-f0-9]{40,64}$/i.test(head||'') || !changes.length)throw new Error('保存版本不正确。');
+    if(!changes.some(item=>item.path===DATA_PATH) || changes.some(item=>!/^journal\/(space-v1\.json|v2\/(settings\.json|(entry|event)\/[a-zA-Z0-9-]{1,2}\/[a-zA-Z0-9-]{1,64}\.json|months\/(settings|undated|\d{4}-\d{2})\.json)|migrations\/v1-[a-f0-9]{40,64}\.json)$/.test(item.path)))throw new Error('保存文件范围不正确。');
+    const parent=await this.request('GET',`/git/commits/${head}`);
+    if(!/^[a-f0-9]{40,64}$/i.test(parent?.tree?.sha||''))throw new Error('未能确认保存位置。');
+    const tree=await this.request('POST','/git/trees',{base_tree:parent.tree.sha,tree:changes.map(({path,envelope})=>({path,mode:'100644',type:'blob',...(envelope===null?{sha:null}:{content:JSON.stringify(envelope)})}))});
+    if(!/^[a-f0-9]{40,64}$/i.test(tree?.sha||''))throw new Error('未能确认记录文件。');
+    const commit=await this.request('POST','/git/commits',{message:'Save encrypted journal',tree:tree.sha,parents:[head]});
+    if(!/^[a-f0-9]{40,64}$/i.test(commit?.sha||''))throw new Error('未能确认保存版本。');
+    const updated=await this.request('PATCH',`/git/refs/heads/${encodeURIComponent(this.branch||'main')}`,{sha:commit.sha,force:false});
+    if(updated?.object?.sha!==commit.sha)throw new Error('未收到保存确认，稍后会重新核对。');
+    return commit.sha;
   }
 }

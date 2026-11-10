@@ -1,13 +1,15 @@
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', {fatal:true});
 export const MAX_BYTES = 6 * 1024 * 1024;
+// A per-file bound remains small; the assembled archive is no longer one cloud/local file.
+export const MAX_DOCUMENT_BYTES = 64 * 1024 * 1024;
 export function base64(bytes) {
   let text = '';
   for(let offset=0;offset<bytes.length;offset+=8192) text += String.fromCharCode(...bytes.subarray(offset,offset+8192));
   return btoa(text);
 }
-export function unbase64(value) {
-  if(typeof value !== 'string' || value.length > MAX_BYTES * 2) throw new Error('文件过大或格式不正确。');
+export function unbase64(value,maxBytes=MAX_BYTES) {
+  if(typeof value !== 'string' || value.length > maxBytes * 2) throw new Error('文件过大或格式不正确。');
   return Uint8Array.from(atob(value.replace(/\s/g,'')),char=>char.charCodeAt(0));
 }
 export const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
@@ -30,12 +32,43 @@ export async function seal(value,key,purpose) {
   const encrypted = await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:encoder.encode(purpose),tagLength:128},key,bytes);
   return {format:'little-days-encrypted',version:1,iv:base64(iv),ciphertext:base64(new Uint8Array(encrypted))};
 }
-export async function unseal(envelope,key,purpose) {
+async function readBounded(stream,limit) {
+  const reader=stream.getReader(),parts=[];let size=0;
   try {
-    if(envelope?.format !== 'little-days-encrypted' || envelope.version !== 1) throw new Error();
+    while(true) {
+      const {value,done}=await reader.read();if(done)break;
+      size+=value.byteLength;if(size>limit)throw new Error('展开后的文件超出容量限制。');parts.push(value);
+    }
+  } catch(error) {await reader.cancel().catch(()=>{});throw error;}
+  finally {reader.releaseLock();}
+  const bytes=new Uint8Array(size);let offset=0;
+  for(const part of parts){bytes.set(part,offset);offset+=part.byteLength;}return bytes;
+}
+const compressedPurpose=(purpose,codec,length)=>`${purpose}\0v2\0${codec}\0${length}`;
+export async function sealCompressed(value,key,purpose,{maxBytes=MAX_BYTES}={}) {
+  const plain=encoder.encode(JSON.stringify(value));
+  if(plain.byteLength>maxBytes)throw new Error('这份记录过大，请先导出备份；本次内容没有上传。');
+  let bytes=plain,codec='none';
+  if(typeof CompressionStream==='function') {
+    const compressed=await readBounded(new Blob([plain]).stream().pipeThrough(new CompressionStream('gzip')),maxBytes+4096);
+    if(compressed.byteLength<plain.byteLength){bytes=compressed;codec='gzip';}
+  }
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:encoder.encode(compressedPurpose(purpose,codec,plain.byteLength)),tagLength:128},key,bytes);
+  return {format:'little-days-encrypted',version:2,codec,length:plain.byteLength,iv:base64(iv),ciphertext:base64(new Uint8Array(ciphertext))};
+}
+export async function unseal(envelope,key,purpose,{maxBytes=MAX_BYTES}={}) {
+  try {
+    if(envelope?.format !== 'little-days-encrypted' || ![1,2].includes(envelope.version)) throw new Error();
+    if(envelope.version===2 && (!['gzip','none'].includes(envelope.codec) || !Number.isSafeInteger(envelope.length) || envelope.length<0 || envelope.length>maxBytes))throw new Error();
     const iv = unbase64(envelope.iv); if(iv.length !== 12) throw new Error();
-    const value = await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:encoder.encode(purpose),tagLength:128},key,unbase64(envelope.ciphertext));
-    if(value.byteLength > MAX_BYTES) throw new Error();
+    const aad=envelope.version===2?compressedPurpose(purpose,envelope.codec,envelope.length):purpose;
+    let value=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:encoder.encode(aad),tagLength:128},key,unbase64(envelope.ciphertext,maxBytes)));
+    if(envelope.version===2 && envelope.codec==='gzip') {
+      if(typeof DecompressionStream!=='function')throw new Error();
+      value=await readBounded(new Blob([value]).stream().pipeThrough(new DecompressionStream('gzip')),Math.min(maxBytes,envelope.length));
+    }
+    if(value.byteLength>maxBytes || (envelope.version===2 && value.byteLength!==envelope.length))throw new Error();
     return JSON.parse(decoder.decode(value));
   } catch { throw new Error('无法解密或内容校验失败。请核对恢复码；没有覆盖现有记录。'); }
 }

@@ -1,6 +1,6 @@
 import {validateBackup} from './backup.js';
 import {validateEvents} from './dates.js';
-import {uuid,MAX_BYTES} from './shared-crypto.js';
+import {uuid,MAX_BYTES,MAX_DOCUMENT_BYTES} from './shared-crypto.js';
 
 export function canonical(value) {
   if(Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
@@ -51,11 +51,11 @@ function validateValue(key,value) {
 export function validateDoc(doc,space) {
   if(!doc || doc.format !== 'little-days-sync' || doc.version !== 1 || doc.space !== space || !uuid(space) || !doc.clock || !doc.records || Array.isArray(doc.clock) || Array.isArray(doc.records)) throw new Error('空间数据格式或恢复码不匹配。');
   const clock = Object.entries(doc.clock), records = Object.entries(doc.records);
-  if(clock.length > 256 || records.length > 50000 || new TextEncoder().encode(JSON.stringify(doc)).length > MAX_BYTES) throw new Error('空间容量超出当前版本限制。');
+  if(clock.length > 256 || records.length > 200000 || new TextEncoder().encode(JSON.stringify(doc)).length > MAX_DOCUMENT_BYTES) throw new Error('记录较多，请先导出完整备份再整理。');
   for(const [actor,seq] of clock) if(!uuid(actor) || !Number.isSafeInteger(seq) || seq < 1) throw new Error('版本时钟不正确。');
   const dots = new Set();
   for(const [key,versions] of records) {
-    if(!validKey.test(key) || !Array.isArray(versions) || !versions.length || versions.length > 256) throw new Error('记录版本格式不正确。');
+    if(!validKey.test(key) || !Array.isArray(versions) || !versions.length || versions.length > 256 || new TextEncoder().encode(JSON.stringify(versions)).length>MAX_BYTES) throw new Error('记录版本格式不正确或单条记录过大。');
     for(const version of versions) {
       if(!version?.dot || !uuid(version.dot.actor) || !Number.isSafeInteger(version.dot.seq) || version.dot.seq < 1 || !seen(doc.clock,version.dot) || dots.has(dotId(version.dot))) throw new Error('记录版本标识不正确。');
       dots.add(dotId(version.dot)); validateValue(key,version.value);
@@ -104,11 +104,16 @@ export function mergeDocs(left,right) {
   return validateDoc(merged,left.space);
 }
 export function viewDoc(doc) {
-  const state = blankState(), selected = {}, conflicts = [];
+  const state = blankState(), selected = {}, conflicts = [], comments=new Map(), likes=new Map();
   for(const [key,versions] of Object.entries(doc.records)) {
     const sorted = [...versions].sort((a,b)=>dotId(a.dot).localeCompare(dotId(b.dot)));
     selected[key] = sorted[0].value;
     if(sorted.length > 1) conflicts.push({key,versions:sorted});
+  }
+  for(const [key,value] of Object.entries(selected)) {
+    const [kind,id,person]=key.split('/');
+    if(kind==='comment' && value){if(!comments.has(id))comments.set(id,[]);comments.get(id).push(value);}
+    if(kind==='like' && value===true){if(!likes.has(id))likes.set(id,[]);likes.get(id).push(Number(person));}
   }
   for(const [field,target] of [['title','title'],['anniversary','anniversary']]) if(selected[`setting/${field}`] != null) state[target] = selected[`setting/${field}`];
   for(const person of [0,1]) if(selected[`setting/person${person}`] != null) state.people[person] = selected[`setting/person${person}`];
@@ -118,8 +123,8 @@ export function viewDoc(doc) {
     if(key.startsWith('entry/')) {
       const entry = {...value,updated:value.created,comments:[],likes:[]};
       if(!entry.deleted) {
-        entry.comments = Object.entries(selected).filter(([k,v])=>k.startsWith(`comment/${entry.id}/`) && v).map(([,v])=>v).sort((a,b)=>a.created-b.created || a.id.localeCompare(b.id));
-        entry.likes = [0,1].filter(person=>selected[`like/${entry.id}/${person}`] === true);
+        entry.comments = (comments.get(entry.id)||[]).sort((a,b)=>a.created-b.created || a.id.localeCompare(b.id));
+        entry.likes = (likes.get(entry.id)||[]).sort();
       }
       state.entries.push(entry);
     } else if(key.startsWith('event/')) state.events.push(value);

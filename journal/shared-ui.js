@@ -8,7 +8,7 @@ function download(value,name) {
   const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 async function readBackup(file) {
-  if(!file || file.size>10*1024*1024) throw new Error('请选择小于 10 MB 的加密备份。');
+  if(!file || file.size>128*1024*1024) throw new Error('请选择小于 128 MB 的加密备份。');
   return JSON.parse(await file.text());
 }
 export async function initializeShared(onUpdate) {
@@ -23,7 +23,7 @@ export async function initializeShared(onUpdate) {
     <label>空间恢复码<textarea id="join-recovery" rows="3" autocomplete="off" autocapitalize="none" spellcheck="false" required></textarea></label>
     <label class="checkbox-label" id="recovery-confirm"><input id="recovery-saved" type="checkbox">我已保存恢复码</label>
     <label>访问令牌<input id="join-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="粘贴已准备好的令牌" required></label>
-    <label id="restore-file-label" hidden>云端文件丢失时，从加密备份恢复（可选）<input id="restore-file" type="file" accept=".json,application/json"></label>
+    <label id="restore-file-label" hidden>选择加密备份恢复（可选）<input id="restore-file" type="file" accept=".json,application/json"></label>
     <button class="primary" id="join-submit" type="submit">连接并记住此设备</button><p class="form-message" id="join-message" role="status"></p></form>`;
   document.body.prepend(welcome);
   let generated=newRecovery();$('#join-recovery').value=generated;$('#join-recovery').readOnly=true;
@@ -51,7 +51,7 @@ export async function initializeShared(onUpdate) {
   const card=document.createElement('div');card.className='settings-card full-width';
   card.innerHTML=`<h3>这台手机与我们的空间</h3><p>日记先保存在这台手机，联网后自动同步。</p>
     <label>这台手机的身份<select id="device-person"></select></label><div class="device-actions"><button type="button" class="secondary" id="show-recovery">查看恢复码</button><button type="button" class="text-button" id="refresh-access">更新访问授权</button><button type="button" class="text-button danger" id="leave-device">退出此设备</button></div>
-    <p class="small">退出会清除这台浏览器里的记录、草稿和连接信息，已同步的内容保留。</p><div id="sync-conflicts"></div>`;
+    <p class="small">退出会清除这台浏览器里的记录、草稿和连接信息，已同步的内容保留。</p><p id="storage-usage" class="small"></p><div id="sync-conflicts"></div>`;
   $('.settings-grid').prepend(card);
   const dialog=document.createElement('dialog');dialog.id='device-dialog';
   dialog.innerHTML='<div class="dialog-head"><h2 id="device-heading"></h2><button class="icon-button" id="device-close" aria-label="关闭">×</button></div><div id="device-content"></div>';
@@ -61,6 +61,8 @@ export async function initializeShared(onUpdate) {
   function renderStatus(message) {
     $('#sync-status').textContent=message || (current.pending?'已保存在本机 · 等待同步':`已同步${current.lastSync?' · '+new Date(current.lastSync).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):''}`);
     $('#sync-now').disabled=busy;
+    const size=bytes=>bytes<1024?`${bytes} B`:bytes<1024*1024?`${(bytes/1024).toFixed(1)} KB`:`${(bytes/1024/1024).toFixed(1)} MB`;
+    if(current.storage)$('#storage-usage').textContent=`文字与留言 ${size(current.storage.textBytes)}${current.storage.cloudBytes===null?'':` · 云端记录 ${size(current.storage.cloudBytes)}`}${current.storage.repositoryBytes===null?'':` · 含历史约 ${size(current.storage.repositoryBytes)}（更新可能延迟）`}`;
     $('#device-person').replaceChildren(...current.state.people.map((name,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`身份：${name}`;return option;}));$('#device-person').value=String(current.active);
     const container=$('#sync-conflicts');container.replaceChildren();
     if(current.conflicts.length) {
