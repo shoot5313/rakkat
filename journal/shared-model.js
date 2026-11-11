@@ -1,4 +1,4 @@
-import {validateBackup} from './backup.js';
+import {validateBackup,validReplyTo} from './backup.js';
 import {validateEvents} from './dates.js';
 import {uuid,MAX_BYTES,MAX_DOCUMENT_BYTES} from './shared-crypto.js';
 
@@ -38,7 +38,7 @@ function validateValue(key,value) {
     if(value.id !== recordId) throw new Error('日期标识不匹配。');
     validateEvents([value]);
   } else if(kind === 'comment') {
-    if(value.id !== extra || ![0,1].includes(value.author) || typeof value.body !== 'string' || value.body.length > 2000 || !Number.isFinite(value.created) || value.created < 0) throw new Error('留言格式不正确。');
+    if(value.id !== extra || ![0,1].includes(value.author) || typeof value.body !== 'string' || value.body.length > 2000 || !Number.isFinite(value.created) || value.created < 0 || !validReplyTo(value.replyTo,value.id)) throw new Error('留言格式不正确。');
   } else if(kind === 'like') {
     if(typeof value !== 'boolean') throw new Error('喜欢标记格式不正确。');
   } else if(kind === 'setting') {

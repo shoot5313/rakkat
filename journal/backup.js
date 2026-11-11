@@ -1,5 +1,6 @@
 import { validDate, validateEvents } from './dates.js';
 export const moods = ['晴朗','想你','平静','开心','有点累','小情绪'];
+export const validReplyTo = (value,commentId) => value == null || (typeof value === 'string' && /^[a-zA-Z0-9-]{1,64}$/.test(value) && value !== commentId);
 export function validateBackup(data) {
   const string = (value,max) => typeof value === 'string' && value.length <= max;
   const id = value => typeof value === 'string' && /^[a-zA-Z0-9-]{1,64}$/.test(value);
@@ -12,8 +13,8 @@ export function validateBackup(data) {
     if(!entry || !id(entry.id) || ids.has(entry.id) || !person(entry.author) || !validDate(entry.date) || !string(entry.title,80) || !string(entry.body,20000) || !moods.includes(entry.mood) || !Array.isArray(entry.photos) || entry.photos.length > 6 || !entry.photos.every(photo) || !Array.isArray(entry.likes) || entry.likes.length > 2 || new Set(entry.likes).size !== entry.likes.length || !entry.likes.every(person) || !Array.isArray(entry.comments) || entry.comments.length > 10000 || !time(entry.created) || !time(entry.updated)) throw new Error('备份中的日记格式不正确，尚未导入。');
     ids.add(entry.id);
     const comments = entry.comments.map(comment => {
-      if(!comment || !id(comment.id) || !person(comment.author) || !string(comment.body,2000) || !time(comment.created)) throw new Error('备份中的留言格式不正确。');
-      return {id:comment.id,author:comment.author,body:comment.body,created:comment.created};
+      if(!comment || !id(comment.id) || !person(comment.author) || !string(comment.body,2000) || !time(comment.created) || !validReplyTo(comment.replyTo,comment.id)) throw new Error('备份中的留言格式不正确。');
+      return {id:comment.id,author:comment.author,body:comment.body,created:comment.created,...(comment.replyTo ? {replyTo:comment.replyTo} : {})};
     });
     return {id:entry.id,author:entry.author,date:entry.date,title:entry.title,body:entry.body,mood:entry.mood,photos:entry.photos,comments,likes:entry.likes,created:entry.created,updated:entry.updated,example:entry.example === true,deleted:entry.deleted === true};
   });

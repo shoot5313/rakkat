@@ -1,5 +1,5 @@
 const PREFIX='little-days-shared:'+self.registration.scope;
-const CACHE=PREFIX+':v9';
+const CACHE=PREFIX+':v10';
 const SHELL=["./","./index.html","./manifest.webmanifest","./app.js","./dates.js","./backup.js","./style.css","./icon.svg","./shared-crypto.js","./shared-model.js","./shared-api.js","./shared-store.js","./shared-device.js","./shared-layout.js","./shared-cloud.js","./shared-ui.js","./shared.css"].map(path=>new URL(path,self.registration.scope).href);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL.map(url=>new Request(url,{cache:'reload'}))))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(PREFIX+':')&&key!==CACHE).map(key=>caches.delete(key))))));

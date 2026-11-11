@@ -14,6 +14,7 @@ const prettyDate = value => { const [year,month,day] = value.split('-'); return 
 let db, state, tab = 'diary', filter = 'all', active = 0, editingId = null, openId = null, attachments = [], draftTimer, toastTimer;
 let mutationQueue = Promise.resolve();
 let entryLimit = 60;
+let replyToId = null;
 let eventFilter = 'all', selectedDay = today(), calendarMonth = today().slice(0,7), editingEventId = null;
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel(isShared ? 'little-days-shared' : 'little-days') : null;
 
@@ -210,11 +211,38 @@ function closeDialog(id) {
   }
   $(`#${id}`).close();
 }
-function showDetail(id) {
+function commentExcerpt(body) {return body.length > 120 ? body.slice(0,120)+'…' : body;}
+function renderComments(entry) {
+  if(!entry.comments.length)return '<p class="no-comments">看完了，就给对方留一句话吧。</p>';
+  const comments = new Map(entry.comments.map(comment=>[comment.id,comment]));
+  return entry.comments.map(comment=>{
+    const parent = comments.get(comment.replyTo);
+    const quote = comment.replyTo ? `<div class="comment-quote">${parent ? `<span>回复 ${escape(state.people[parent.author])}</span><p>${escape(commentExcerpt(parent.body))}</p>` : '<span>原留言暂不可见</span>'}</div>` : '';
+    return `<div class="comment" data-comment="${escape(comment.id)}">${avatar(comment.author)}<div class="comment-content"><strong>${escape(state.people[comment.author])}</strong>${quote}<p class="comment-body">${escape(comment.body)}</p><div class="comment-footer"><small>${new Date(comment.created).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small><button type="button" class="text-button comment-reply" data-reply="${escape(comment.id)}" aria-label="回复${escape(state.people[comment.author])}的留言">回复</button></div></div></div>`;
+  }).join('');
+}
+function selectReply(id,focus=true) {
+  const form = $('#comment-form');if(!form || form.dataset.saving)return;
+  const comment = state.entries.find(entry=>entry.id === openId)?.comments.find(item=>item.id === id);
+  replyToId = id || null;
+  $('#reply-context').hidden = !replyToId;
+  $('#reply-label').textContent = comment ? `回复 ${state.people[comment.author]}` : '原留言暂不可见';
+  $('#reply-preview').textContent = comment ? commentExcerpt(comment.body) : '';
+  form.elements.comment.placeholder = replyToId ? '写下你的回复…' : '想对你说…';
+  form.elements.comment.setAttribute('aria-label',replyToId ? '回复内容' : '留言内容');
+  if(replyToId)form.elements.comment.setAttribute('aria-describedby','reply-label reply-preview');
+  else form.elements.comment.removeAttribute('aria-describedby');
+  form.querySelector('[type="submit"]').textContent = replyToId ? '回复' : '留下';
+  if(focus)form.elements.comment.focus();
+}
+function showDetail(id,{preserveComment=false}={}) {
   const entry = state.entries.find(item => item.id === id && !item.deleted); if(!entry) return;
+  const draft = preserveComment && openId === id && $('#detail').open ? {body:$('#comment-form')?.elements.comment.value || '',replyTo:replyToId} : null;
   openId = id;
   detailBase=entryContent(entry);
-  $('#detail-content').innerHTML = `${entryTop(entry)}<h2 class="detail-title">${escape(entry.title || '今天的小记')}</h2><p class="detail-body">${escape(entry.body)}</p><div class="detail-controls"><button class="secondary detail-like ${entry.likes.includes(active) ? 'liked' : ''}" id="like-entry">${entry.likes.includes(active) ? '♥ 已收藏这份心情' : '♡ 喜欢这篇'}${entry.likes.length ? ` · ${entry.likes.length}` : ''}</button>${entry.author === active ? '<button class="text-button" id="edit-entry">编辑</button><button class="text-button danger" id="delete-entry">删除</button>' : ''}</div><h3 class="comments-heading">留给你的悄悄话</h3><div class="comments">${entry.comments.length ? entry.comments.map(comment => `<div class="comment">${avatar(comment.author)}<div class="comment-content"><strong>${escape(state.people[comment.author])}</strong><p>${escape(comment.body)}</p><small>${new Date(comment.created).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></div></div>`).join('') : '<p class="no-comments">看完了，就给对方留一句话吧。</p>'}</div><form class="comment-form" id="comment-form"><input name="comment" placeholder="想对你说…" maxlength="2000" required aria-label="留言内容"><button class="primary" type="submit">留下</button></form>`;
+  $('#detail-content').innerHTML = `${entryTop(entry)}<h2 class="detail-title">${escape(entry.title || '今天的小记')}</h2><p class="detail-body">${escape(entry.body)}</p><div class="detail-controls"><button class="secondary detail-like ${entry.likes.includes(active) ? 'liked' : ''}" id="like-entry">${entry.likes.includes(active) ? '♥ 已收藏这份心情' : '♡ 喜欢这篇'}${entry.likes.length ? ` · ${entry.likes.length}` : ''}</button>${entry.author === active ? '<button class="text-button" id="edit-entry">编辑</button><button class="text-button danger" id="delete-entry">删除</button>' : ''}</div><h3 class="comments-heading">留给你的悄悄话</h3><div class="comments">${renderComments(entry)}</div><div class="reply-context" id="reply-context" hidden><div aria-live="polite"><strong id="reply-label"></strong><p id="reply-preview"></p></div><button type="button" class="text-button" id="cancel-reply">取消回复</button></div><form class="comment-form" id="comment-form"><input name="comment" placeholder="想对你说…" maxlength="2000" required aria-label="留言内容"><button class="primary" type="submit">留下</button></form>`;
+  $('#comment-form').elements.comment.value = draft?.body || '';
+  selectReply(draft?.replyTo || null,false);
   if(!$('#detail').open) $('#detail').showModal();
 }
 function bindEvents() {
@@ -237,11 +265,13 @@ function bindEvents() {
       }
       if(target.dataset.close) closeDialog(target.dataset.close);
       if(target.dataset.entry) showDetail(target.dataset.entry);
+      if(target.dataset.reply) selectReply(target.dataset.reply);
+      if(target.id === 'cancel-reply') selectReply(null);
       if(target.id === 'more-entries') {entryLimit+=60;renderEntries();}
       if(target.dataset.filter) { entryLimit=60;filter = target.dataset.filter; document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('selected',button === target)); renderEntries(); }
       if(target.id === 'identity') { if(shared) {setTab('space');$('#device-person').focus();} else {active = 1-active; render(); toast(`正在体验「${state.people[active]}」的视角`);} }
       if(target.id === 'new-entry') await openEditor();
-      if(target.id === 'like-entry') { await mutate(data => { const entry = data.entries.find(item => item.id === openId && !item.deleted); if(!entry) throw new Error('日记已删除'); entry.likes = entry.likes.includes(active) ? entry.likes.filter(person => person !== active) : [...entry.likes,active]; entry.updated = Date.now(); }); showDetail(openId); }
+      if(target.id === 'like-entry') { if($('#comment-form')?.dataset.saving)return;const id=openId;await mutate(data => { const entry = data.entries.find(item => item.id === id && !item.deleted); if(!entry) throw new Error('日记已删除'); entry.likes = entry.likes.includes(active) ? entry.likes.filter(person => person !== active) : [...entry.likes,active]; entry.updated = Date.now(); }); if(openId===id && $('#detail').open)showDetail(id,{preserveComment:true}); }
       if(target.id === 'edit-entry') { $('#detail').close(); await openEditor(openId); }
       if(target.id === 'delete-entry' && confirm('删除这篇日记和它的留言？如需保留，请先导出备份。')) { await mutate(data => { const entry = data.entries.find(item => item.id === openId); if(!entry || entry.author !== active) throw new Error('无法删除'); if(isShared && entryContent(entry)!==detailBase) throw new Error('日记已在另一处修改，请重新打开后再删除。'); Object.assign(entry,{deleted:true,title:'',body:'',photos:[],comments:[],likes:[],updated:Date.now()}); }); $('#detail').close(); toast('这篇日记已移除。'); }
       if(target.id === 'export') {
@@ -296,10 +326,21 @@ function bindEvents() {
   });
   $('#detail-content').addEventListener('submit',async event => {
     if(event.target.id !== 'comment-form') return; event.preventDefault();
-    const body = event.target.elements.comment.value.trim(); if(!body) return;
-    const button = event.target.querySelector('button'); button.disabled = true;
-    try { await mutate(data => { const entry = data.entries.find(item => item.id === openId && !item.deleted); if(!entry) throw new Error('日记已删除'); entry.comments.push({id:uid(),author:active,body,created:Date.now()}); entry.updated = Date.now(); }); showDetail(openId); toast('悄悄话留下了。'); }
-    catch { toast('留言未保存，请稍后重试。'); button.disabled = false; }
+    const form=event.target;if(form.dataset.saving)return;
+    const body = form.elements.comment.value.trim(); if(!body) return;
+    const entryId=openId,replyTo=replyToId,author=active;
+    const button = form.querySelector('[type="submit"]'); button.disabled = true;form.dataset.saving='true';form.elements.comment.readOnly=true;
+    try {
+      await mutate(data => {
+        const entry = data.entries.find(item => item.id === entryId && !item.deleted);if(!entry)throw new Error('日记已删除');
+        if(replyTo && !entry.comments.some(comment=>comment.id===replyTo))throw new Error('原留言已不可见，请先取消回复再留言。');
+        entry.comments.push({id:uid(),author,body,created:Date.now(),...(replyTo ? {replyTo} : {})});entry.updated=Date.now();
+      });
+      if(openId===entryId && $('#detail').open && $('#comment-form')===form)showDetail(entryId);
+      toast(replyTo ? '回复留下了。' : '悄悄话留下了。');
+    }
+    catch(error) { toast(`留言未保存：${error.message || '请稍后重试。'}`); }
+    finally {button.disabled=false;delete form.dataset.saving;form.elements.comment.readOnly=false;}
   });
   $('#settings').addEventListener('input',()=>{$('#settings').dataset.dirty='true';});
   $('#settings').addEventListener('submit',async event => {
