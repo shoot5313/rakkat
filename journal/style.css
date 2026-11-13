@@ -35,3 +35,4 @@
 .reply-context .text-button{flex:none;padding:8px;font-size:11px}
 .reply-context:not([hidden])+.comment-form{margin-top:8px}
 .comment-form input{flex:1;min-width:0}
+.entry-time{margin-top:10px;color:#688987;font-size:11px;line-height:1.7;font-weight:400}

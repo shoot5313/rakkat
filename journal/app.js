@@ -59,7 +59,12 @@ function sampleState() {
 }
 function visibleEntries() { return state.entries.filter(entry => !entry.deleted).sort((a,b) => b.date.localeCompare(a.date) || b.created-a.created); }
 function avatar(author) { return `<span class="avatar ${author ? 'partner' : ''}">${escape(Array.from(state.people[author])[0])}</span>`; }
-function entryTop(entry) { return `<div class="card-top">${avatar(entry.author)}<span>${escape(state.people[entry.author])}</span>${entry.example ? '<span class="example">示例</span>' : ''}<span class="date">${prettyDate(entry.date)}</span></div>`; }
+function entryTime(entry) {
+  const edited = entry.editedAt != null, date = new Date(edited ? entry.editedAt : entry.created);
+  const label = date.toLocaleString('zh-CN',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+  return `<p class="entry-time">${edited ? '更新于' : '写于'} <time datetime="${date.toISOString()}">${escape(label)}</time></p>`;
+}
+function entryTop(entry) { return `<div class="card-top">${avatar(entry.author)}<span>${escape(state.people[entry.author])}</span>${entry.example ? '<span class="example">示例</span>' : ''}<span class="date">${prettyDate(entry.date)}</span></div>${entryTime(entry)}`; }
 function empty(title,subtitle,symbol='♡') { return `<div class="empty"><span class="empty-symbol">${symbol}</span>${title}<p>${subtitle}</p></div>`; }
 function render() {
   state.people = displayPeople(state.people);
@@ -316,7 +321,11 @@ function bindEvents() {
     try {
       await mutate(data => {
         const now = Date.now();
-        if(editingId) { const entry = data.entries.find(item => item.id === editingId && !item.deleted); if(!entry || entry.author !== active) throw new Error('这篇日记已不存在'); if(isShared && entryContent(entry)!==editingBase) throw new Error('这篇日记已在另一处修改。编辑器里的文字保留着，请先复制，再重新打开核对。'); Object.assign(entry,value,{updated:now,example:false}); }
+        if(editingId) {
+          const entry = data.entries.find(item => item.id === editingId && !item.deleted);if(!entry || entry.author !== active)throw new Error('这篇日记已不存在');
+          if(isShared && entryContent(entry)!==editingBase)throw new Error('这篇日记已在另一处修改。编辑器里的文字保留着，请先复制，再重新打开核对。');
+          if(entryContent({...entry,...value})!==entryContent(entry))Object.assign(entry,value,{updated:now,editedAt:now,example:false});
+        }
         else data.entries.push({...value,id:uid(),author:active,comments:[],likes:[],created:now,updated:now,example:false});
       });
       if(!editingId) { try { await write(`draft-${active}`,null); } catch { toast('日记已保存，但草稿未能清除。'); } }

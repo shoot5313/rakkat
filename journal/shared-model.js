@@ -19,7 +19,8 @@ function flatten(state) {
   const values = {'setting/title':state.title,'setting/person0':state.people[0],'setting/person1':state.people[1],'setting/anniversary':state.anniversary};
   for(const entry of state.entries) {
     const {comments,likes,updated,...content} = entry;
-    // A comment/like does not count as an edit to the diary body.
+    // Local `updated` includes comments/likes. Keep `editedAt` with the body so
+    // its timestamp follows the same version through merging and restoration.
     values[`entry/${entry.id}`] = content;
     for(const comment of comments) values[`comment/${entry.id}/${comment.id}`] = comment;
     for(const person of [0,1]) values[`like/${entry.id}/${person}`] = likes.includes(person);
